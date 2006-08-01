@@ -12,9 +12,11 @@ __PACKAGE__->add_constructor(from_mail => 'mail = ?');
 
 use HTML::Scrubber;
 use HTML::FormatText::WithLinks;        
+use HTML::Parser;
+use Digest::MD5 qw(md5_hex);
 use vars qw($VERSION @allow @rules @default);
 
-$VERSION = "0.1";
+$VERSION = "0.301";
 
 
 sub on_store_order { 2 }
@@ -28,6 +30,13 @@ sub on_store {
         after_link  => ' [ %l ]',
         footnote    => ''
     );
+
+    my $text = "";
+    my $p = HTML::Parser->new(api_version => 3,
+                                  text_h => [ sub { $text .= shift }, "dtext" ]
+                                 );
+
+
 
 
     # create the scrubber
@@ -46,9 +55,46 @@ sub on_store {
         next unless $_->content_type eq 'text/html';
         my $raw      =  $_->payload;
         my $scrubbed =  $scrubber->scrub($raw);
-        my $text     =  $f->parse($raw); 
+           
+        $text     =  ""; 
+        $p->parse($raw); 
+
         Email::Store::HTML->create( { mail => $mail->id, raw => $raw, scrubbed => $scrubbed, as_text => $text } );
     }
+
+
+    my $ct = $mail->simple->header('Content-Type') || "";
+    if ($ct =~ m!text/html!i) {
+        my $raw      = $mail->utf8_body;
+        my $scrubbed = $scrubber->scrub($raw);
+        my $mime     = Email::MIME->new($mail->message);
+        my $charset   = $mime->{ct}->{attributes}{charset};
+
+        # extract raw text
+        $text     = "";
+        $p->parse($mime->body);
+
+        Email::Store::HTML->create( { mail => $mail->id, raw => $raw, scrubbed => $scrubbed, as_text => $text } );
+
+        $mime->body_set($text);         
+        $mail->message($mime->as_string);
+        undef $mail->{simple}; # Invalidate cache
+        $mail->update;
+
+
+    }
+    
+    return unless ($mail->utf8_body =~ /^\s*$/s);
+
+    my @htmls = $mail->html; return unless @htmls;
+
+    my $simple = $mail->simple;
+    $simple->body_set($htmls[0]->as_text);
+    $mail->message($simple->as_string);
+    undef $mail->{simple}; # Invalidate cache
+    $mail->update;
+
+
 }
 
 =head1 NAME
@@ -132,7 +178,7 @@ L<HTML::Scrubber>, L<HTML::FormatText::WithLinks>
 # Configuration for HTML::Scrubber
 ###
 
-my @allow = qw[ br hr b a p pre ul ol li i em strong table tr td th div ];
+my @allow = qw[ br hr b a p pre ul ol li i em strong table tr td th div span blockquote img sup sub ];
                                                                             #
 my @rules = (
         script => 0,

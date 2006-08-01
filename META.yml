@@ -1,24 +1,14 @@
---- #YAML:1.0
-name: Email-Store-HTML
-version: 0.1
-author:
-  - Simon Wistow <simon@thegestalt.org>
-abstract: |-
-  various HTML related functions for Email::Store::Mail
-license: perl
+# http://module-build.sourceforge.net/META-spec.html
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         Email-Store-HTML
+version:      0.301
+version_from: lib/Email/Store/HTML.pm
+installdirs:  site
 requires:
-  Email::Store: 0
-  HTML::FormatText::WithLinks: 0
-  HTML::Scrubber: 0
-  perl: 5.006
-build_requires:
-  DBD::SQLite: 0
-  Test::More: 0
-provides:
-  Email::Store::HTML:
-    file: lib/Email/Store/HTML.pm
-    version: 0.1
-  Email::Store::Mail:
-    file: lib/Email/Store/HTML.pm
-    version: 0.1
-generated_by: Module::Build version 0.25
+    Email::Store:                  0
+    HTML::FormatText::WithLinks:   0
+    HTML::Scrubber:                0
+    Test::More:                    0.47
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.30
